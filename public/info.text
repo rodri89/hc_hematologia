@@ -1,0 +1,49 @@
+Creo el proyect nuevo desde la terminal.
+
+----------------------------------------------------------------------------------
+Dentro de AppServiceProvider en el metodo boot agrego la siguiente linea de codigo.
+Debo importar el use arriba.
+
+use Illuminate\Support\Facades\Schema;
+
+public function boot()
+{
+    Schema::defaultStringLength(191);
+}
+----------------------------------------------------------------------------------
+Creo sistema de login (auth): 
+	php artisan make:auth
+Luego
+	php artisan migrate
+----------------------------------------------------------------------------------
+Creo los Middleware para poder trabajar con distintas sesiones.
+
+	php artisan make:middleware usuarioMedico
+
+Esto me crea un middleware dentro de la carpeta app/http/middleware
+Debo modificar ese archivo...entrar y ver.
+Luego debo agregar en app/http/kernel.php el nuevo middleware en el metodo routeMiddleware
+	
+	'medico' => \App\Http\Middleware\Medico::class,
+	
+
+	
+insert into usuario_tipo(tipo, activo) values('Admin', 1);
+insert into usuario_tipo(tipo, activo) values('Medico', 1);
+insert into usuario_tipo(tipo, activo) values('Secretaria', 1); 
+
+
+
+-----------------------
+Instalar style Html
+-----------------------
+En la terminal corro el siguiente codigo:
+	composer require "laravelcollective/html":"^5.8.0"
+
+Edit file app/config/app.php in your project and add this line to providers array.
+	Collective\Html\HtmlServiceProvider::class
+
+Add the following aliases to aliases array in the same file.
+	'Form' => Collective\Html\FormFacade::class,
+	'Html' => Collective\Html\HtmlFacade::class,
+-----------------------
