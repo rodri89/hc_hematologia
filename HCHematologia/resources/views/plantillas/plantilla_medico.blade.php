@@ -61,7 +61,14 @@
           <i class="fas fa-home"></i>
           <span>Home</span></a>
       </li>
-      
+
+      <!-- Nav Item - Tables -->
+      <li class="nav-item">
+        <a class="nav-link" href="/config_firma">
+           <i class="fas fa-fw fa-signature"></i>
+          <span>Config</span></a>
+      </li>
+
       <div id="paciente_opciones">
       
       <!-- Divider -->
@@ -142,7 +149,6 @@
              <i class="fas fa-fw fa-folder-open"></i>
             <span>Imprimir</span></a>
         </li>
-        
 
         <li class="nav-item" hidden>
           <a class="nav-link" href="/crear_nueva_consulta_digital">

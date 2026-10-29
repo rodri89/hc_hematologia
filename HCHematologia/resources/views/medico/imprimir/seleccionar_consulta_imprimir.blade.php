@@ -74,12 +74,36 @@
               $fechaMostrar = $fechaMostrarArray2[2].'/'.$fechaMostrarArray2[1].'/'.$fechaMostrarArray2[0];
              ?>
             <td>{{$fechaMostrar}}</td>
-            <td>{{$c->descripcion}}</td>
+            <td>
+              {{ \Illuminate\Support\Str::limit($c->descripcion, 360) }}
+              @if(strlen($c->descripcion) > 360)
+                <br>
+                <button type="button" class="btn btn-link btn-sm p-0" onclick="mostrarResumenCompleto(this)" data-resumen="{{ $c->descripcion }}">Ver más</button>
+              @endif
+            </td>
             <td><button onclick="mostrarConsultaSeleccionada('{{$c->consulta_id}}')" class="rodri_button_aceptar_si">></button></td>
+            </tr>
           @endforeach
       </tbody>
 </table>
 
+
+<div id="modal_resumen_completo" class="modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Resumen completo</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <p id="texto_resumen_completo" style="white-space: pre-wrap;"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="rodri_button_volver" data-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="modal_resumen_consulta_paciente" class="modal" tabindex="-1" role="dialog" aria-labelledby="myExtraLargeModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl">
@@ -112,7 +136,11 @@
             <div id="seccion_tabla_trombofilia"></div>            
             <div id="seccion_tabla_transtorno_hemorragiparo"></div>
             <br>
-        <div class="modal-footer">            
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="check_agregar_firma_digital">
+              <label class="form-check-label" for="check_agregar_firma_digital">¿Desea agregar su firma digital?</label>
+            </div>
+        <div class="modal-footer">
              <button type="button" 
              class="rodri_button_volver"             
              data-dismiss="modal">Volver</button>             
@@ -130,6 +158,12 @@
 
 
 <script type="text/javascript">  
+
+  function mostrarResumenCompleto(btn) {
+    var texto = btn.getAttribute('data-resumen');
+    document.getElementById('texto_resumen_completo').textContent = texto;
+    $('#modal_resumen_completo').modal('show');
+  }
 
   function mostrarConsultaSeleccionada(consulta_id) {
     borrarSeccion("seccion_tabla_laboratorio");
@@ -165,6 +199,17 @@
             }
             if(data.resumen != null){
               document.getElementById("modal_resumen_id").value = data.resumen.descripcion;
+            }
+            var checkFirma = document.getElementById("check_agregar_firma_digital");
+            checkFirma.checked = false;
+            if(data.firmaMedico != null){
+              window.firmaMedicoActual = data.firmaMedico;
+              checkFirma.disabled = false;
+              checkFirma.title = "";
+            } else {
+              window.firmaMedicoActual = null;
+              checkFirma.disabled = true;
+              checkFirma.title = "No tiene una firma digital configurada. Vaya a Config para crearla.";
             }
             if(data.evoluciones != null){
               for (i = 0; i < data.evoluciones.length; i++){
@@ -546,19 +591,78 @@ function imprimir() {
               
               agregarLaboratorioParaImprimir(ventana, "Transtorno Hemorragiparo", data.transtornoHemorragiparoArraySize, data.transtornoHemorragiparoArray, data.transtornoHemorragiparoCantidadConsultas.length, data.transtornoHemorragiparoCantidadConsultas);
 
-              ventana.document.write( '<br>' );   
+              ventana.document.write( '<br>' );
               ventana.document.write( '<br>' );
 
-              //ventana.document.write('<p style="margin-left:150px;">'+fecha.value+'</p>');
-              ventana.document.write( '<div style="margin-top:100px;">' );    
-              ventana.document.write('<p style=";margin-left:100px; display: inline;">.......................................</p><p style="margin-left:220px; display: inline;">.......................................</p>');
-              ventana.document.write( '<br>' );   
-              ventana.document.write('<p style="margin-left:150px; display: inline;">Fecha</p><p style="margin-left:300px; display: inline;">Firma y Sello Médico</p>');
-              ventana.document.write( '</div>' );    
-
               ventana.document.close();
-              ventana.print( );
-              ventana.close();          
+
+              var agregarFirmaDigital = document.getElementById("check_agregar_firma_digital").checked;
+              var imgFirmaImprimir = null;
+
+              var divFirma = ventana.document.createElement('div');
+              divFirma.style.marginTop = '100px';
+              divFirma.style.display = 'flex';
+
+              // Columna Fecha
+              var colFecha = ventana.document.createElement('div');
+              colFecha.style.width = '250px';
+              colFecha.style.marginLeft = '100px';
+              colFecha.style.textAlign = 'center';
+              colFecha.innerHTML = '<div>.......................................</div><div style="margin-top:6px;">Fecha</div>';
+              divFirma.appendChild(colFecha);
+
+              // Columna Firma y Sello Médico
+              var colFirma = ventana.document.createElement('div');
+              colFirma.style.width = '250px';
+              colFirma.style.marginLeft = '20px';
+              colFirma.style.textAlign = 'center';
+
+              if(agregarFirmaDigital && window.firmaMedicoActual != null){
+                var lineaFirma = ventana.document.createElement('div');
+                lineaFirma.style.borderBottom = '1px solid #000';
+                lineaFirma.style.width = '220px';
+                lineaFirma.style.margin = '0 auto';
+                colFirma.appendChild(lineaFirma);
+
+                imgFirmaImprimir = ventana.document.createElement('img');
+                imgFirmaImprimir.id = 'img_firma_imprimir';
+                imgFirmaImprimir.src = '/img/'+window.firmaMedicoActual.firma;
+                imgFirmaImprimir.style.display = 'block';
+                imgFirmaImprimir.style.margin = '-60px auto 0 auto';
+                imgFirmaImprimir.style.maxHeight = '70px';
+                imgFirmaImprimir.style.maxWidth = '220px';
+                colFirma.appendChild(imgFirmaImprimir);
+
+                var etiquetaFirma = ventana.document.createElement('div');
+                etiquetaFirma.style.marginTop = '6px';
+                etiquetaFirma.textContent = 'Firma y Sello Médico';
+                colFirma.appendChild(etiquetaFirma);
+              } else {
+                colFirma.innerHTML = '<div>.......................................</div><div style="margin-top:6px;">Firma y Sello Médico</div>';
+              }
+
+              divFirma.appendChild(colFirma);
+
+              ventana.document.body.appendChild(divFirma);
+
+              var imprimirYCerrarVentana = function(){
+                ventana.print();
+                ventana.close();
+              };
+
+              if(imgFirmaImprimir != null && !imgFirmaImprimir.complete){
+                var yaSeImprimio = false;
+                var imprimirUnaVez = function(){
+                  if(yaSeImprimio) return;
+                  yaSeImprimio = true;
+                  imprimirYCerrarVentana();
+                };
+                imgFirmaImprimir.onload = imprimirUnaVez;
+                imgFirmaImprimir.onerror = imprimirUnaVez;
+                setTimeout(imprimirUnaVez, 2000);
+              } else {
+                imprimirYCerrarVentana();
+              }
             }
          }
       }); 

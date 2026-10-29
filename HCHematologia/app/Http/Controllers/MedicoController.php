@@ -54,6 +54,7 @@ use App\Resumen;
 use App\MedicacionActual;
 
 use App\MedicoConfig;
+use App\MedicoFirma;
 use App\Diagnostico;
 
 use DateTime;
@@ -4669,7 +4670,93 @@ class MedicoController extends Controller
         $transtornoHemorragiparoArray = $this->getControlTranstornoHemorragiparoTablaImprimir($paciente_id, "transtorno_hemorragiparos", $consulta_id); 
         $transtornoHemorragiparoArraySize = sizeof($transtornoHemorragiparoArray);
 
-        return response()->json(array('response'=>1, 'resumen'=>$resumen, 'antecedentes'=>$antecedentes,'evoluciones'=>$evoluciones, 'paciente'=>$paciente,'laboratorioGeneralArray'=>$laboratorioGeneralArray, 'laboratorioGeneralCantidadConsultas'=>$laboratorioGeneralCantidadConsultas, 'laboratorioGeneralArraySize'=>$laboratorioGeneralArraySize, 'controlAnticoagulacionCantidadConsultas'=>$controlAnticoagulacionCantidadConsultas, 'controlAnticoagulacionArray'=>$controlAnticoagulacionArray, 'controlAnticoagulacionArraySize'=>$controlAnticoagulacionArraySize, 'trombofiliaCantidadConsultas'=>$trombofiliaCantidadConsultas, 'trombofiliaArray'=>$trombofiliaArray, 'trombofiliaArraySize'=>$trombofiliaArraySize, 'transtornoHemorragiparoCantidadConsultas'=>$transtornoHemorragiparoCantidadConsultas, 'transtornoHemorragiparoArray'=>$transtornoHemorragiparoArray, 'transtornoHemorragiparoArraySize'=>$transtornoHemorragiparoArraySize)); 
+        $user = \Auth::user();
+        $firmaMedico = DB::table('medico_firmas')
+                            ->where('medico_firmas.medico_user_id', $user->id)
+                            ->where('medico_firmas.activo', 1)
+                            ->first();
+
+        return response()->json(array('response'=>1, 'resumen'=>$resumen, 'antecedentes'=>$antecedentes,'evoluciones'=>$evoluciones, 'paciente'=>$paciente,'laboratorioGeneralArray'=>$laboratorioGeneralArray, 'laboratorioGeneralCantidadConsultas'=>$laboratorioGeneralCantidadConsultas, 'laboratorioGeneralArraySize'=>$laboratorioGeneralArraySize, 'controlAnticoagulacionCantidadConsultas'=>$controlAnticoagulacionCantidadConsultas, 'controlAnticoagulacionArray'=>$controlAnticoagulacionArray, 'controlAnticoagulacionArraySize'=>$controlAnticoagulacionArraySize, 'trombofiliaCantidadConsultas'=>$trombofiliaCantidadConsultas, 'trombofiliaArray'=>$trombofiliaArray, 'trombofiliaArraySize'=>$trombofiliaArraySize, 'transtornoHemorragiparoCantidadConsultas'=>$transtornoHemorragiparoCantidadConsultas, 'transtornoHemorragiparoArray'=>$transtornoHemorragiparoArray, 'transtornoHemorragiparoArraySize'=>$transtornoHemorragiparoArraySize, 'firmaMedico'=>$firmaMedico));
+    }
+
+    function configFirma() {
+        $user = \Auth::user();
+        $firmaActual = DB::table('medico_firmas')
+                            ->where('medico_firmas.medico_user_id', $user->id)
+                            ->where('medico_firmas.activo', 1)
+                            ->first();
+
+        return view('medico.config.config_firma')
+                        ->with('firmaActual', $firmaActual);
+    }
+
+    function guardarFirma(Request $request){
+        $user = \Auth::user();
+        $usuario_actual_nombre = $user->email;
+        $pathFolderMedico_aux = explode('@', $usuario_actual_nombre);
+        $pathFolderMedico = $pathFolderMedico_aux[0];
+
+        if($request->hasfile('firma_imagen')){
+            $image = $request->file('firma_imagen');
+            $dir = 'img/'.$pathFolderMedico.'/firma';
+            if(!file_exists($dir)){
+                mkdir($dir, 0775, true);
+            }
+
+            $pathName = $image->store('img/'.$pathFolderMedico.'/firma');
+            $name = collect(explode('/', $pathName))->last();
+            $path = $dir.'/'.$name;
+            Image::make($image->getRealPath())->save($path);
+
+            DB::table('medico_firmas')
+                    ->where('medico_user_id', $user->id)
+                    ->update(['activo' => 0]);
+
+            $medicoFirma = new MedicoFirma;
+            $medicoFirma->medico_user_id = $user->id;
+            $medicoFirma->firma = $pathFolderMedico.'/firma/'.$name;
+            $medicoFirma->activo = 1;
+            $medicoFirma->save();
+        }
+
+        return redirect()->route('configfirma');
+    }
+
+    function guardarFirmaDibujada(Request $request){
+        $user = \Auth::user();
+        $usuario_actual_nombre = $user->email;
+        $pathFolderMedico_aux = explode('@', $usuario_actual_nombre);
+        $pathFolderMedico = $pathFolderMedico_aux[0];
+
+        $baseFromJavascript = $request->base64;
+
+        if($baseFromJavascript != null){
+            $img_extension = $this->getB64Extension($baseFromJavascript);
+            $img_name = 'firma_'.time().'.'.$img_extension;
+            $data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $baseFromJavascript));
+
+            $dir = 'img/'.$pathFolderMedico.'/firma';
+            if(!file_exists($dir)){
+                mkdir($dir, 0775, true);
+            }
+
+            $filepath = $dir.'/'.$img_name;
+            file_put_contents($filepath, $data);
+
+            DB::table('medico_firmas')
+                    ->where('medico_user_id', $user->id)
+                    ->update(['activo' => 0]);
+
+            $medicoFirma = new MedicoFirma;
+            $medicoFirma->medico_user_id = $user->id;
+            $medicoFirma->firma = $pathFolderMedico.'/firma/'.$img_name;
+            $medicoFirma->activo = 1;
+            $medicoFirma->save();
+
+            return response()->json(array('response'=>1, 'firma'=>$pathFolderMedico.'/firma/'.$img_name));
+        }
+
+        return response()->json(array('response'=>0));
     }
 
     //$json = $this->getLaboratorioTablaAuxImprimir($json, 'plaquetas', 'Plaquetas (/mm3)', $paciente_id, $tabla, $consulta_id);

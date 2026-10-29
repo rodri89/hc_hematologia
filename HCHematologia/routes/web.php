@@ -342,7 +342,13 @@ Route::group(['middleware' => ['usuarioMedico']], function () {
 
 	Route::post('guardar_config_secciones','MedicoController@guardarConfigSecciones')->name('guardarconfigsecciones');	
 
-	Route::post('get_config_secciones','MedicoController@getConfigSecciones')->name('getconfigsecciones');	
+	Route::post('get_config_secciones','MedicoController@getConfigSecciones')->name('getconfigsecciones');
+
+	Route::get('config_firma','MedicoController@configFirma')->name('configfirma');
+
+	Route::post('guardar_firma','MedicoController@guardarFirma')->name('guardarfirma');
+
+	Route::post('guardar_firma_dibujada','MedicoController@guardarFirmaDibujada')->name('guardarfirmadibujada');
  });
 
 // Aca van a ir todas las rutas que tiene acceso una secretaria.
