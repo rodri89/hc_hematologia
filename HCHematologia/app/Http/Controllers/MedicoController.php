@@ -4691,6 +4691,11 @@ class MedicoController extends Controller
     }
 
     function guardarFirma(Request $request){
+        // Los PDF se convierten a PNG en el navegador y se guardan por guardarFirmaDibujada
+        $request->validate([
+            'firma_imagen' => 'required|file|mimes:png,jpg,jpeg|max:5120',
+        ]);
+
         $user = \Auth::user();
         $usuario_actual_nombre = $user->email;
         $pathFolderMedico_aux = explode('@', $usuario_actual_nombre);
